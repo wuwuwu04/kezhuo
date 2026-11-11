@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kezhuo
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        value: file:./prod.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RECOVER_CODE
+        value: kezhuo-admin

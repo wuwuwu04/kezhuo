@@ -1,0 +1,104 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  role         String
+  studentNo    String?    @unique
+  phone        String?    @unique
+  account      String?    @unique
+  passwordHash String
+  nickname     String     @default("")
+  campus       String     @default("")
+  bio          String     @default("")
+  status       String     @default("normal")
+  warning      String     @default("")
+  createdAt    DateTime   @default(now())
+  goods        Goods[]    @relation("seller")
+  favorites    Favorite[]
+  ordersBuy    Order[]    @relation("buyer")
+  ordersSell   Order[]    @relation("seller")
+  messages     Message[]
+  reports      Report[]
+}
+
+model Goods {
+  id           Int          @id @default(autoincrement())
+  sellerId     Int
+  seller       User         @relation("seller", fields: [sellerId], references: [id])
+  title        String
+  category     String       @default("")
+  priceFen     Int          @default(0)
+  description  String       @default("")
+  campus       String       @default("")
+  status       String
+  rejectReason String       @default("")
+  warning      String       @default("")
+  createdAt    DateTime     @default(now())
+  images       GoodsImage[]
+  favorites    Favorite[]
+  orders       Order[]
+  messages     Message[]
+  reports      Report[]
+}
+
+model GoodsImage {
+  id      Int    @id @default(autoincrement())
+  goodsId Int
+  goods   Goods  @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+  path    String
+  sort    Int    @default(0)
+}
+
+model Favorite {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id])
+  goodsId Int
+  goods   Goods @relation(fields: [goodsId], references: [id])
+
+  @@unique([userId, goodsId])
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  buyerId   Int
+  buyer     User     @relation("buyer", fields: [buyerId], references: [id])
+  sellerId  Int
+  seller    User     @relation("seller", fields: [sellerId], references: [id])
+  goodsId   Int
+  goods     Goods    @relation(fields: [goodsId], references: [id])
+  priceFen  Int
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  goodsId   Int
+  goods     Goods    @relation(fields: [goodsId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  reporterId Int
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  goodsId    Int
+  goods      Goods    @relation(fields: [goodsId], references: [id])
+  reason     String
+  detail     String   @default("")
+  image      String   @default("")
+  status     String   @default("open")
+  note       String   @default("")
+  createdAt  DateTime @default(now())
+}
