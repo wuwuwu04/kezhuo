@@ -8,5 +8,6 @@ prisma/dev.db-journal
 prisma/*.db
 prisma/*.db-journal
 public/uploads
+data/uploads
 tsconfig.tsbuildinfo
 .vercel

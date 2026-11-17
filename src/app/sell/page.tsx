@@ -99,7 +99,7 @@ export default function SellPage() {
           <span>图片</span>
           <input
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             multiple
             onChange={async (event) => {
               const files = Array.from(event.target.files || []);
@@ -110,10 +110,11 @@ export default function SellPage() {
                 return;
               }
               setBusy(true);
+              setError("");
               try {
                 const paths = await uploadImages(files);
+                if (!paths?.length) throw new Error("图片没有传上去");
                 setForm((prev) => ({ ...prev, images: prev.images.concat(paths) }));
-                setError("");
               } catch (err) {
                 setError(err instanceof Error ? err.message : "图片没有传上去");
               } finally {
@@ -121,6 +122,7 @@ export default function SellPage() {
               }
             }}
           />
+          <span className="meta">支持 jpg / png / webp，选完后稍等预览出现再点发布。</span>
           <span className="uploads">
             {form.images.map((src) => (
               <figure key={src}>

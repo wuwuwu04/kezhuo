@@ -114,7 +114,12 @@ function cleanImages(value: unknown) {
   const paths = value.map((item) => text(item)).filter(Boolean);
   if (paths.length > 5) throw new Fail(400, "最多 5 张图片");
   for (const path of paths) {
-    if (!path.startsWith("/uploads/") && !path.startsWith("/seed/") && !path.startsWith("/photos/")) {
+    if (
+      !path.startsWith("/api/uploads/") &&
+      !path.startsWith("/uploads/") &&
+      !path.startsWith("/seed/") &&
+      !path.startsWith("/photos/")
+    ) {
       throw new Fail(400, "图片地址不对");
     }
   }
@@ -660,7 +665,7 @@ export async function handle(req: Request, path: string[]) {
     if (!REPORT_OK(reason)) throw new Fail(400, "请选择举报原因");
     const goods = await db.goods.findUnique({ where: { id: goodsId } });
     if (!goods) throw new Fail(404, "商品不存在");
-    if (image && !image.startsWith("/uploads/") && !image.startsWith("/seed/")) {
+    if (image && !image.startsWith("/api/uploads/") && !image.startsWith("/uploads/") && !image.startsWith("/seed/")) {
       throw new Fail(400, "图片地址不对");
     }
     const report = await db.report.create({
