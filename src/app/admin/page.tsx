@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Chrome } from "@/components/Chrome";
 import { api, useSession, type GoodsCard } from "@/lib/client";
-import { GOODS_STATUS, REPORT_STATUS, yuan } from "@/lib/labels";
+import { GOODS_STATUS, ORDER_STATUS, REPORT_STATUS, yuan } from "@/lib/labels";
 
 type Report = {
   id: number;
@@ -24,11 +24,22 @@ type Person = {
   status: string;
   warning: string;
 };
+type AdminOrder = {
+  id: number;
+  no: string;
+  priceFen: number;
+  status: string;
+  createdAt: string;
+  goods: { id: number; title: string; cover: string };
+  buyer: { id: number; nickname: string; phone: string; studentNo: string };
+  seller: { id: number; nickname: string; phone: string; studentNo: string };
+};
 type Stats = { users: number; goods: number; orders: number };
 
 const panels = [
   ["audit", "审核"],
   ["shelf", "在售"],
+  ["orders", "订单"],
   ["reports", "举报"],
   ["users", "用户"],
   ["stats", "统计"],
@@ -41,6 +52,9 @@ export default function AdminPage() {
   const [picked, setPicked] = useState<number[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [orderStatus, setOrderStatus] = useState("");
+  const [orderNo, setOrderNo] = useState("");
   const [q, setQ] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
   const [preset, setPreset] = useState("all");
@@ -64,6 +78,15 @@ export default function AdminPage() {
   }
   function loadUsers(keyword = q) {
     api<{ users: Person[] }>("/api/admin/users?q=" + encodeURIComponent(keyword)).then((data) => setPeople(data.users)).catch(fail);
+  }
+  function loadOrders(next?: { status?: string; no?: string }) {
+    const state = { status: orderStatus, no: orderNo, ...next };
+    const params = new URLSearchParams();
+    if (state.status) params.set("status", state.status);
+    if (state.no) params.set("no", state.no);
+    api<{ orders: AdminOrder[] }>("/api/admin/orders?" + params.toString())
+      .then((data) => { setOrders(data.orders); setError(""); })
+      .catch(fail);
   }
   function loadStats(nextPreset = preset, nextFrom = from, nextTo = to) {
     const params = new URLSearchParams();
@@ -93,6 +116,11 @@ export default function AdminPage() {
     setPicked([]);
     if (panel === "audit") loadGoods("pending");
     if (panel === "shelf") loadGoods("on_sale");
+    if (panel === "orders") {
+      setOrderStatus("");
+      setOrderNo("");
+      loadOrders({ status: "", no: "" });
+    }
     if (panel === "reports") loadReports();
     if (panel === "users") loadUsers("");
     if (panel === "stats") loadStats("all", "", "");
@@ -182,6 +210,75 @@ export default function AdminPage() {
               </div>
               {panel === "shelf" && <p className="meta">已下架的商品，卖家申诉通过后可以恢复。到商品页看状态，或在下面输入编号。</p>}
               <Restore onDone={(message) => { setOk(message); setError(""); }} onFail={fail} />
+            </>
+          )}
+
+          {panel === "orders" && (
+            <>
+              <div className="filters">
+                {[
+                  ["", "全部"],
+                  ["pending", "待交易"],
+                  ["done", "已完成"],
+                  ["cancelled", "已取消"],
+                ].map(([value, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    aria-pressed={orderStatus === value}
+                    onClick={() => {
+                      setOrderStatus(value);
+                      loadOrders({ status: value });
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <form
+                className="searchline"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  loadOrders();
+                }}
+              >
+                <input
+                  value={orderNo}
+                  onChange={(event) => setOrderNo(event.target.value)}
+                  placeholder="订单编号，例如 D001"
+                  aria-label="订单编号"
+                />
+                <button className="primary" type="submit">查询</button>
+              </form>
+              <div className="list">
+                {orders.length === 0 ? (
+                  <p>没有订单。</p>
+                ) : (
+                  orders.map((order) => (
+                    <article className="order" key={order.id}>
+                      {order.goods.cover ? <img src={order.goods.cover} alt="" /> : <span className="ph" />}
+                      <div>
+                        <a href={"/goods/" + order.goods.id}>
+                          <strong>{order.no} {order.goods.title}</strong>
+                        </a>
+                        <p className="meta">
+                          {ORDER_STATUS[order.status] || order.status}，{yuan(order.priceFen)}
+                          ，{new Date(order.createdAt).toLocaleString("zh-CN", { hour12: false })}
+                        </p>
+                        <p className="meta">
+                          买家 {order.buyer.nickname}
+                          {order.buyer.studentNo ? "（" + order.buyer.studentNo + "）" : ""}
+                          {order.buyer.phone ? " " + order.buyer.phone : ""}
+                          {" · "}
+                          卖家 {order.seller.nickname}
+                          {order.seller.studentNo ? "（" + order.seller.studentNo + "）" : ""}
+                          {order.seller.phone ? " " + order.seller.phone : ""}
+                        </p>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
             </>
           )}
 

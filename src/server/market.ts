@@ -827,6 +827,54 @@ export async function handle(req: Request, path: string[]) {
     if (action === "password") throw new Fail(403, "不能修改用户密码");
   }
 
+  if (a === "admin" && b === "orders" && method === "GET") {
+    await requireAdmin();
+    const status = text(query.get("status"));
+    const no = text(query.get("no")).replace(/^D/i, "");
+    const where: { status?: string; id?: number } = {};
+    if (status) where.status = status;
+    if (no) {
+      const id = Number(no);
+      if (!id) return { orders: [] };
+      where.id = id;
+    }
+    const rows = await db.order.findMany({
+      where,
+      include: {
+        goods: { include: { images: { orderBy: { sort: "asc" } } } },
+        buyer: true,
+        seller: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return {
+      orders: rows.map((order) => ({
+        id: order.id,
+        no: orderNo(order.id),
+        priceFen: order.priceFen,
+        status: order.status,
+        createdAt: order.createdAt.toISOString(),
+        goods: {
+          id: order.goods.id,
+          title: order.goods.title,
+          cover: order.goods.images[0]?.path || "",
+        },
+        buyer: {
+          id: order.buyer.id,
+          nickname: order.buyer.nickname,
+          phone: order.buyer.phone || "",
+          studentNo: order.buyer.studentNo || "",
+        },
+        seller: {
+          id: order.seller.id,
+          nickname: order.seller.nickname,
+          phone: order.seller.phone || "",
+          studentNo: order.seller.studentNo || "",
+        },
+      })),
+    };
+  }
+
   if (a === "admin" && b === "stats" && method === "GET") {
     await requireAdmin();
     try {
